@@ -4,13 +4,15 @@ import json
 from pprint import pprint
 
 from sympy import S
-from genetic_algo import fitness, cross_over, mutate
+from genetic_algo import fitness, cross_over, mutate, swar2int
 from midiutil import MIDIFile as MidiFile
 
 
 SWARS = "'S 'r 'R 'g 'G 'M 'm 'P 'd 'D 'n 'N S r R g G M m P d D n N S' r' R' g' G' M' m' P' d' D' n' N'".split()
 
-epsilon = 0.9
+epsilon = 0.5
+
+POPULATION_LEN = 20
 
 tpm = np.load("tpm.npy")
 
@@ -46,7 +48,7 @@ chromosomes = []
 for i in range(50):
     chromosomes.append([])
     startNote = "'D"
-    for j in range(64):
+    for j in range(POPULATION_LEN):
         if np.random.random() < epsilon:  # Exploit
             nextNote = getfromtpm(tpm, startNote)
         else:  # Explore
@@ -62,10 +64,10 @@ overallFitness = sum(population.values()) / len(population)
 prevOverallFitness = 0
 
 gen = 1
-while overallFitness < 145:
+while overallFitness < 90 and gen < 400:
     print("Generation", gen)
 
-    d = [x / sum(population.values()) for x in population.values()] 
+    d = [x / sum(population.values()) for x in population.values()]
     d = np.array(d)
     gen += 1
     best_parents = np.random.choice(
@@ -74,14 +76,14 @@ while overallFitness < 145:
         p=d,
     )
 
-    # best_parents = nlargest(12, population, key=population.get)
+    best_parents = nlargest(12, population, key=population.get)
     # for i in best_parents:
     #     print(i[:10], fitness(i.split(" ")))
 
     population = {i: fitness(i.split(" ")) for i in best_parents}
 
     passes = 0
-    while len(population) < 50:
+    while len(population) < 50 and passes < 400:
         passes += 1
         p1 = np.random.choice(best_parents).split(" ")
         p2 = np.random.choice(best_parents).split(" ")
@@ -90,13 +92,14 @@ while overallFitness < 145:
 
         res1, res2 = None, None
         if do_crossover:
-            for i in range(50):
+            for i in range(POPULATION_LEN):
                 k = np.random.randint(0, len(p1))
                 res1, res2 = cross_over(p1, p2, k)
                 if res1 is not None:
                     break
 
         elif do_mutation:
+            pass
             res1 = mutate(p1)
 
         else:
@@ -122,47 +125,6 @@ print(population.values())
 
 tonic = 56
 
-swars = {
-    tonic - 12: "'S",
-    tonic - 11: "'r",
-    tonic - 10: "'R",
-    tonic - 9: "'g",
-    tonic - 8: "'G",
-    tonic - 7: "'M",
-    tonic - 6: "'m",
-    tonic - 5: "'P",
-    tonic - 4: "'d",
-    tonic - 3: "'D",
-    tonic - 2: "'n",
-    tonic - 1: "'N",
-    tonic: "S",
-    tonic + 1: "r",
-    tonic + 2: "R",
-    tonic + 3: "g",
-    tonic + 4: "G",
-    tonic + 5: "M",
-    tonic + 6: "m",
-    tonic + 7: "P",
-    tonic + 8: "d",
-    tonic + 9: "D",
-    tonic + 10: "n",
-    tonic + 11: "N",
-    tonic + 12: "S'",
-    tonic + 13: "r'",
-    tonic + 14: "R'",
-    tonic + 15: "g'",
-    tonic + 16: "G'",
-    tonic + 17: "M'",
-    tonic + 18: "m'",
-    tonic + 19: "P'",
-    tonic + 20: "d'",
-    tonic + 21: "D'",
-    tonic + 22: "n'",
-    tonic + 23: "N'",
-}
-
-swars = {v: k for k, v in swars.items()}
-
 
 def makeMidi(sample):
     mid = MidiFile()
@@ -171,10 +133,11 @@ def makeMidi(sample):
     v = 100
     b = 0
     for s in sample.split(" "):
-        mid.addNote(0, 0, swars[s], b, 0.9, v)
+        mid.addNote(0, 0, swar2int(s) + tonic - 12, b, 0.9, v)
         b += 1
     with open("output.mid", "wb") as output_file:
         mid.writeFile(output_file)
+
 
 s = max(population, key=population.get)
 

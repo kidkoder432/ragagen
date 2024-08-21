@@ -29,11 +29,11 @@ allowed_aaroh = sorted(
 allowed_avroh = reversed(allowed_aaroh)
 
 weights = {
-    "aa": 3,  # Adhere to Aaroh and Avaroh
+    "aa": 1,  # Adhere to Aaroh and Avaroh
     "ol": 5,  # Obnoxious Leaps
     "lr": 2,  # Leap Resolution
     "or": 2,  # Octave Range
-    "npr": 3,  # Note Repetition
+    "npr": 5,  # Note Repetition
 }
 
 
@@ -99,8 +99,11 @@ def fitness(seq):
     minNote = min([swar2int(x) for x in seq])
     maxNote = max([swar2int(x) for x in seq])
 
+    if maxNote > 29 or minNote < 5:
+        fitness_or = weights["or"] * 10
+
     if maxNote - minNote > 24:
-        fitness_or = weights["or"] * 4
+        fitness_or += weights["or"] * 4
     else:
         fitness_or = weights["or"] * 0
 
@@ -117,7 +120,9 @@ def fitness(seq):
 
     fitness_npr = weights["npr"] * count
 
-    return 150 - (fitness_aa + fitness_ol + fitness_lr + fitness_or + fitness_npr) / 5
+    return max(
+        0.01, 100 - (fitness_aa + fitness_ol + fitness_lr + fitness_or + fitness_npr)
+    )
 
 
 def cross_over(parent1, parent2, k):
@@ -141,7 +146,7 @@ def cross_over(parent1, parent2, k):
         return None, None  # Breaks AA
 
     # 2. Large Leaps
-    if abs(swar2int(parent1[k]) - swar2int(parent2[k])) > 12:
+    if abs(swar2int(parent1[k]) - swar2int(parent2[k])) > 6:
         return None, None  # Breaks OL
 
     return child1, child2
@@ -158,4 +163,3 @@ def mutate(seq):
     k = np.random.randint(len(frag), len(seq) - len(frag))
 
     return seq[:k] + frag + seq[k + len(frag) :]
-
