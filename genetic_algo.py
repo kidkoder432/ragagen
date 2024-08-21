@@ -1,5 +1,6 @@
-import numpy as np
 import json
+
+import numpy as np
 
 # Implementation of "Markov-based genetic algorithm with 𝜖-greedy exploration
 # for Indian classical music composition" (https://doi.org/10.1016/j.eswa.2022.118561)
@@ -15,25 +16,24 @@ def flatten(xss):
     return [x for xs in xss for x in xs]
 
 
-aaroh = raga["aaroh"].split(" ")
-
-allowed_aaroh = sorted(
-    flatten([[x, "'" + x, x + "'"] for x in aaroh[:-1]]), key=lambda x: SWARS.index(x)
-)
-
-allowed_avroh = reversed(allowed_aaroh)
-
-
 def swar2int(s):
     return SWARS.index(s)
 
 
+aaroh = raga["aaroh"].split(" ")
+
+allowed_aaroh = sorted(
+    flatten([[x, "'" + x, x + "'"] for x in aaroh[:-1]]), key=swar2int
+)
+
+allowed_avroh = reversed(allowed_aaroh)
+
 weights = {
     "aa": 3,  # Adhere to Aaroh and Avaroh
-    "ol": 2,  # Obnoxious Leaps
+    "ol": 5,  # Obnoxious Leaps
     "lr": 2,  # Leap Resolution
     "or": 2,  # Octave Range
-    "npr": 1,  # Note Repetition
+    "npr": 3,  # Note Repetition
 }
 
 
@@ -110,9 +110,10 @@ def fitness(seq):
     # within the sequence.
 
     count = 0
-    for i in range(1, len(seq)):
-        if seq[i] == seq[i - 1]:
-            count += 1
+    for j in range(1, 6):
+        for i in range(2 * j, len(seq)):
+            if seq[i - 2 * j : i - j] == seq[i - j : i]:
+                count += 1
 
     fitness_npr = weights["npr"] * count
 
@@ -157,3 +158,4 @@ def mutate(seq):
     k = np.random.randint(len(frag), len(seq) - len(frag))
 
     return seq[:k] + frag + seq[k + len(frag) :]
+
